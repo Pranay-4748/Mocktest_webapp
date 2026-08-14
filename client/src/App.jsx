@@ -11,13 +11,6 @@ import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import AdminLoginPage from './pages/auth/AdminLoginPage';
 
-// Guest Pages
-import GuestEntry from './pages/guest/GuestEntry';
-import GuestTestList from './pages/guest/GuestTestList';
-import GuestInstructions from './pages/guest/GuestInstructions';
-import GuestExam from './pages/guest/GuestExam';
-import GuestResult from './pages/guest/GuestResult';
-
 // Student Pages
 import DashboardPage from './pages/student/DashboardPage';
 import TestListPage from './pages/student/TestListPage';
@@ -44,13 +37,6 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
 
-          {/* Guest — no login required */}
-          <Route path="/guest" element={<GuestEntry />} />
-          <Route path="/guest/tests" element={<GuestTestList />} />
-          <Route path="/guest/tests/:id/instructions" element={<GuestInstructions />} />
-          <Route path="/guest/tests/:id/exam" element={<GuestExam />} />
-          <Route path="/guest/result" element={<GuestResult />} />
-
           {/* Student Protected */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
@@ -71,8 +57,8 @@ export default function App() {
             </Route>
           </Route>
 
-          <Route path="/" element={<Navigate to="/guest" replace />} />
-          <Route path="*" element={<Navigate to="/guest" replace />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>
       </ToastProvider>
