@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Question from '../models/Question.js';
 import Test from '../models/Test.js';
 
@@ -44,6 +45,9 @@ export const getQuestions = async (req, res) => {
 // GET /api/admin/questions/:id
 export const getQuestionById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid question ID' });
+    }
     const question = await Question.findById(req.params.id).populate('testId', 'title');
     if (!question) return res.status(404).json({ message: 'Question not found' });
 
@@ -92,6 +96,9 @@ export const createQuestion = async (req, res) => {
 // PUT /api/admin/questions/:id
 export const updateQuestion = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid question ID' });
+    }
     const question = await Question.findById(req.params.id);
     if (!question) return res.status(404).json({ message: 'Question not found' });
 
@@ -122,6 +129,9 @@ export const updateQuestion = async (req, res) => {
 // DELETE /api/admin/questions/:id
 export const deleteQuestion = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid question ID' });
+    }
     const question = await Question.findById(req.params.id);
     if (!question) return res.status(404).json({ message: 'Question not found' });
 

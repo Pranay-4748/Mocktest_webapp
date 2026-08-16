@@ -67,19 +67,23 @@ const STATUS_BADGE = {
 };
 
 export default function AdminDashboard() {
-  const [stats, setStats]   = useState(null);
+  const [stats, setStats]   = useState({ total: 0, published: 0, draft: 0, questions: 0 });
   const [tests, setTests]   = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [testsRes, questionsRes] = await Promise.all([
+        const [testsRes, questionsRes] = await Promise.allSettled([
           api.get('/admin/tests', { params: { limit: 100 } }),
           api.get('/admin/questions/by-subject'),
         ]);
-        const allTests = testsRes.data.tests;
-        const totalQuestions = (questionsRes.data.groups || []).reduce((s, g) => s + g.total, 0);
+        
+        const allTests = testsRes.status === 'fulfilled' ? (testsRes.value.data.tests || []) : [];
+        const totalQuestions = questionsRes.status === 'fulfilled'
+          ? (questionsRes.value.data.groups || []).reduce((s, g) => s + g.total, 0)
+          : 0;
+
         setStats({
           total:     allTests.length,
           published: allTests.filter((t) => t.status === 'published').length,
