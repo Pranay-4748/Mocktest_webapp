@@ -149,10 +149,18 @@ export const getQuestionsBySubject = async (req, res) => {
     const testMap = {};
     adminTests.forEach((t) => { testMap[String(t._id)] = t.title; });
 
-    // If admin has no tests, return empty
-    if (!testIds.length) return res.json({ success: true, groups: [] });
-
-    const matchStage = { testId: { $in: testIds } };
+    const matchStage = testIds.length ? {
+      $or: [
+        { testId: { $in: testIds } },
+        { createdBy: req.admin._id, testId: { $exists: false } },
+        { createdBy: req.admin._id, testId: null },
+      ],
+    } : {
+      $or: [
+        { createdBy: req.admin._id, testId: { $exists: false } },
+        { createdBy: req.admin._id, testId: null },
+      ],
+    };
     if (difficulty) matchStage.difficulty = difficulty;
 
     const groups = await Question.aggregate([
