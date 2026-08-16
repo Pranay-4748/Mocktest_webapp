@@ -75,21 +75,25 @@ export default function QuestionBank() {
     try {
       const params = {};
       if (diffFilter) params.difficulty = diffFilter;
-      const [{ data: groupsData }, { data: testsData }] = await Promise.all([
-        api.get('/admin/questions/by-subject', { params }),
-        api.get('/admin/tests'),
-      ]);
-      setGroups(groupsData.groups || []);
-      setTests(testsData.tests || []);
+      const { data } = await api.get('/admin/questions/by-subject', { params });
+      setGroups(data.groups || []);
     } catch (err) {
-      toast.error('Failed to load question bank');
-      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to load question bank');
+      console.error('fetchGroups error:', err.response?.data || err.message);
     } finally {
       setLoading(false);
     }
   }, [diffFilter, toast]);
 
+  const fetchTests = useCallback(async () => {
+    try {
+      const { data } = await api.get('/admin/tests');
+      setTests(data.tests || []);
+    } catch (err) { console.error('fetchTests error:', err.response?.data || err.message); }
+  }, []);
+
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
+  useEffect(() => { fetchTests(); }, [fetchTests]);
 
   const toggleCollapse = (subject) =>
     setCollapsed((c) => ({ ...c, [subject]: !c[subject] }));
