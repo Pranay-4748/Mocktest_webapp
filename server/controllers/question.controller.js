@@ -1,6 +1,5 @@
 import Question from '../models/Question.js';
 import Test from '../models/Test.js';
-import mongoose from 'mongoose';
 
 // GET /api/admin/questions?testId=&search=&subject=&difficulty=&page=&limit=
 export const getQuestions = async (req, res) => {
@@ -145,27 +144,22 @@ export const getQuestionsBySubject = async (req, res) => {
   try {
     const { difficulty } = req.query;
 
-    // Get all tests owned by this admin
-    const adminTests = await Test.find({ createdBy: req.admin._id }).select('_id');
+    const adminTests = await Test.find({ createdBy: req.admin._id }).select('_id title');
     const testIds = adminTests.map((t) => t._id);
+    const testMap = {};
+    adminTests.forEach((t) => { testMap[String(t._id)] = t.title; });
 
-    const adminId = new mongoose.Types.ObjectId(req.admin._id);
-    const matchStage = {};
-    if (testIds.length) {
-      matchStage.$or = [
-        { testId: { $in: testIds } },
-        { createdBy: adminId },
-      ];
-    } else {
-      matchStage.createdBy = adminId;
-    }
+    // If admin has no tests, return empty
+    if (!testIds.length) return res.json({ success: true, groups: [] });
+
+    const matchStage = { testId: { $in: testIds } };
     if (difficulty) matchStage.difficulty = difficulty;
 
     const groups = await Question.aggregate([
       { $match: matchStage },
       {
         $group: {
-          _id: { $ifNull: ['$subject', ''] },
+          _id: { $ifNull: ['$subject', 'Uncategorized'] },
           questions: { $push: '$$ROOT' },
           total:  { $sum: 1 },
           easy:   { $sum: { $cond: [{ $eq: ['$difficulty', 'easy']   }, 1, 0] } },
@@ -176,21 +170,8 @@ export const getQuestionsBySubject = async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // Populate test titles — filter out nulls before querying
-    const allTestIds = [...new Set(
-      groups
-        .flatMap((g) => g.questions.map((q) => q.testId))
-        .filter(Boolean)
-        .map(String)
-    )];
-    const tests = allTestIds.length
-      ? await Test.find({ _id: { $in: allTestIds } }).select('title')
-      : [];
-    const testMap = {};
-    tests.forEach((t) => { testMap[String(t._id)] = t.title; });
-
     const result = groups.map((g) => ({
-      subject:   g._id || 'Uncategorized',
+      subject:   g._id,
       total:     g.total,
       easy:      g.easy,
       medium:    g.medium,
