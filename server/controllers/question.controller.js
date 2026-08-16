@@ -1,5 +1,6 @@
 import Question from '../models/Question.js';
 import Test from '../models/Test.js';
+import mongoose from 'mongoose';
 
 // GET /api/admin/questions?testId=&search=&subject=&difficulty=&page=&limit=
 export const getQuestions = async (req, res) => {
@@ -148,12 +149,16 @@ export const getQuestionsBySubject = async (req, res) => {
     const adminTests = await Test.find({ createdBy: req.admin._id }).select('_id');
     const testIds = adminTests.map((t) => t._id);
 
-    const matchStage = {
-      $or: [
+    const adminId = new mongoose.Types.ObjectId(req.admin._id);
+    const matchStage = {};
+    if (testIds.length) {
+      matchStage.$or = [
         { testId: { $in: testIds } },
-        { createdBy: req.admin._id }
-      ]
-    };
+        { createdBy: adminId },
+      ];
+    } else {
+      matchStage.createdBy = adminId;
+    }
     if (difficulty) matchStage.difficulty = difficulty;
 
     const groups = await Question.aggregate([
@@ -171,9 +176,16 @@ export const getQuestionsBySubject = async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    // Populate test titles
-    const allTestIds = [...new Set(groups.flatMap((g) => g.questions.map((q) => String(q.testId))))];
-    const tests = await Test.find({ _id: { $in: allTestIds } }).select('title');
+    // Populate test titles — filter out nulls before querying
+    const allTestIds = [...new Set(
+      groups
+        .flatMap((g) => g.questions.map((q) => q.testId))
+        .filter(Boolean)
+        .map(String)
+    )];
+    const tests = allTestIds.length
+      ? await Test.find({ _id: { $in: allTestIds } }).select('title')
+      : [];
     const testMap = {};
     tests.forEach((t) => { testMap[String(t._id)] = t.title; });
 
@@ -191,6 +203,7 @@ export const getQuestionsBySubject = async (req, res) => {
 
     res.json({ success: true, groups: result });
   } catch (err) {
+    console.error('getQuestionsBySubject error:', err.message);
     res.status(500).json({ message: err.message });
   }
 };

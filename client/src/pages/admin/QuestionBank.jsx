@@ -54,6 +54,7 @@ export default function QuestionBank() {
   const [subjects, setSubjects]     = useState([]);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadSubject, setUploadSubject] = useState('');
+  const [tests, setTests] = useState([]);
   
   // Subject Management
   const [showSubjectsModal, setShowSubjectsModal] = useState(false);
@@ -74,8 +75,12 @@ export default function QuestionBank() {
     try {
       const params = {};
       if (diffFilter) params.difficulty = diffFilter;
-      const { data } = await api.get('/admin/questions/by-subject', { params });
-      setGroups(data.groups || []);
+      const [{ data: groupsData }, { data: testsData }] = await Promise.all([
+        api.get('/admin/questions/by-subject', { params }),
+        api.get('/admin/tests'),
+      ]);
+      setGroups(groupsData.groups || []);
+      setTests(testsData.tests || []);
     } catch (err) {
       toast.error('Failed to load question bank');
       console.error(err);
