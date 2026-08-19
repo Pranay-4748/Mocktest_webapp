@@ -10,6 +10,9 @@ export const getQuestions = async (req, res) => {
 
     // Scope to tests owned by this admin
     if (testId) {
+      if (!mongoose.Types.ObjectId.isValid(testId)) {
+        return res.status(400).json({ message: 'Invalid test ID' });
+      }
       const test = await Test.findOne({ _id: testId, createdBy: req.admin._id });
       if (!test) return res.status(404).json({ message: 'Test not found' });
       filter.testId = testId;
@@ -152,7 +155,15 @@ export const deleteQuestion = async (req, res) => {
 // GET /api/admin/questions/by-subject?difficulty=
 export const getQuestionsBySubject = async (req, res) => {
   try {
-    const { difficulty } = req.query;
+    const { difficulty, subjectId, testId } = req.query;
+
+    if (testId && !mongoose.Types.ObjectId.isValid(testId)) {
+      return res.status(400).json({ message: 'Invalid test ID' });
+    }
+    
+    if (subjectId && !mongoose.Types.ObjectId.isValid(subjectId)) {
+      return res.status(400).json({ message: 'Invalid subject ID' });
+    }
 
     const adminTests = await Test.find({ createdBy: req.admin._id }).select('_id title');
     const testIds = adminTests.map((t) => t._id);
@@ -172,6 +183,16 @@ export const getQuestionsBySubject = async (req, res) => {
       ],
     };
     if (difficulty) matchStage.difficulty = difficulty;
+    
+    // Add additional filters if provided
+    if (testId) {
+      matchStage.testId = new mongoose.Types.ObjectId(testId);
+    }
+    // Note: subjects are typically strings in this schema, so subjectId might not apply directly 
+    // to the subject field unless it's an ObjectId. We'll support it generically to avoid 500s.
+    if (subjectId) {
+       matchStage.subjectId = new mongoose.Types.ObjectId(subjectId);
+    }
 
     const groups = await Question.aggregate([
       { $match: matchStage },

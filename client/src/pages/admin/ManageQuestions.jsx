@@ -26,7 +26,7 @@ export default function ManageQuestions() {
   const [questions, setQuestions]   = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [tests, setTests]           = useState([]);
-  const [selectedTest, setSelectedTest] = useState(testId || '');
+  const [selectedTest, setSelectedTest] = useState(testId && testId !== 'undefined' ? testId : '');
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [diffFilter, setDiffFilter] = useState('');
@@ -48,6 +48,11 @@ export default function ManageQuestions() {
   }, []);
 
   const fetchQuestions = useCallback(async (page = 1) => {
+    if (selectedTest === 'undefined') {
+      console.error("Aborting request: testId is undefined");
+      return;
+    }
+    
     setLoading(true);
     try {
       const params = { page, limit: 10 };
