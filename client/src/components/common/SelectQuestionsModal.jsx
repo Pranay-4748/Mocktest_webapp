@@ -11,6 +11,18 @@ export default function SelectQuestionsModal({ testId, onClose, onLinked }) {
   const [questions, setQuestions] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [search, setSearch] = useState('');
+  const [subjects, setSubjects] = useState([]);
+  const [selectedSubject, setSelectedSubject] = useState('');
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const { data } = await api.get('/admin/subjects');
+        setSubjects(data.subjects || []);
+      } catch (err) {}
+    };
+    fetchSubjects();
+  }, []);
 
   useEffect(() => {
     const fetchBank = async () => {
@@ -55,18 +67,32 @@ export default function SelectQuestionsModal({ testId, onClose, onLinked }) {
     }
   };
 
-  const filtered = questions.filter(q => q.question.toLowerCase().includes(search.toLowerCase()) || (q.subject && q.subject.toLowerCase().includes(search.toLowerCase())));
+  const filtered = questions.filter(q => {
+    const matchSearch = q.question.toLowerCase().includes(search.toLowerCase()) || (q.subject && q.subject.toLowerCase().includes(search.toLowerCase()));
+    const matchSubject = selectedSubject ? q.subject === selectedSubject : true;
+    return matchSearch && matchSubject;
+  });
 
   return (
     <Modal title="Select from Question Bank" onClose={onClose} maxWidth="max-w-4xl">
       <div className="space-y-4">
-        <input 
-          type="text" 
-          placeholder="Search by question or subject..." 
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
+        <div className="flex gap-2">
+          <input 
+            type="text" 
+            placeholder="Search by question or subject..." 
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+          <select
+            value={selectedSubject}
+            onChange={e => setSelectedSubject(e.target.value)}
+            className="w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            <option value="">All Subjects</option>
+            {subjects.map(s => <option key={s._id} value={s.name}>{s.name}</option>)}
+          </select>
+        </div>
 
         <div className="max-h-[50vh] overflow-y-auto border border-gray-200 rounded-lg">
           {loading ? (

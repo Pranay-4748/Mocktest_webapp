@@ -17,8 +17,7 @@ export const getQuestions = async (req, res) => {
       if (!test) return res.status(404).json({ message: 'Test not found' });
       filter.testIds = testId;
     } else {
-      const adminTests = await Test.find({ createdBy: req.admin._id }).select('_id');
-      filter.testIds = { $in: adminTests.map((t) => t._id) };
+      filter.createdBy = req.admin._id;
     }
 
     if (search) filter.question = { $regex: search.trim(), $options: 'i' };
