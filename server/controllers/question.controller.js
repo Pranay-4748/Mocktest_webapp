@@ -15,10 +15,10 @@ export const getQuestions = async (req, res) => {
       }
       const test = await Test.findOne({ _id: testId, createdBy: req.admin._id });
       if (!test) return res.status(404).json({ message: 'Test not found' });
-      filter.testId = testId;
+      filter.testIds = testId;
     } else {
       const adminTests = await Test.find({ createdBy: req.admin._id }).select('_id');
-      filter.testId = { $in: adminTests.map((t) => t._id) };
+      filter.testIds = { $in: adminTests.map((t) => t._id) };
     }
 
     if (search) filter.question = { $regex: search.trim(), $options: 'i' };
@@ -28,7 +28,7 @@ export const getQuestions = async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit);
     const [questions, total] = await Promise.all([
       Question.find(filter)
-        .populate('testId', 'title')
+        .populate('testIds', 'title')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
@@ -51,13 +51,13 @@ export const getQuestionById = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid question ID' });
     }
-    const question = await Question.findById(req.params.id).populate('testId', 'title');
+    const question = await Question.findById(req.params.id).populate('testIds', 'title');
     if (!question) return res.status(404).json({ message: 'Question not found' });
 
     // Verify ownership via test or createdBy
-    if (question.testId) {
-      const test = await Test.findOne({ _id: question.testId._id || question.testId, createdBy: req.admin._id });
-      if (!test) return res.status(403).json({ message: 'Access denied' });
+    if (question.testIds && question.testIds.length > 0) {
+      const test = await Test.findOne({ _id: { $in: question.testIds.map(t => t._id || t) }, createdBy: req.admin._id });
+      if (!test && String(question.createdBy) !== String(req.admin._id)) return res.status(403).json({ message: 'Access denied' });
     } else if (String(question.createdBy) !== String(req.admin._id)) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -79,7 +79,7 @@ export const createQuestion = async (req, res) => {
     }
 
     const created = await Question.create({
-      testId: testId || undefined,
+      testIds: testId ? [testId] : [],
       createdBy: req.admin._id,
       question: question.trim(),
       options: options.map((o) => o.trim()),
@@ -105,9 +105,9 @@ export const updateQuestion = async (req, res) => {
     const question = await Question.findById(req.params.id);
     if (!question) return res.status(404).json({ message: 'Question not found' });
 
-    if (question.testId) {
-      const test = await Test.findOne({ _id: question.testId, createdBy: req.admin._id });
-      if (!test) return res.status(403).json({ message: 'Access denied' });
+    if (question.testIds && question.testIds.length > 0) {
+      const test = await Test.findOne({ _id: { $in: question.testIds }, createdBy: req.admin._id });
+      if (!test && String(question.createdBy) !== String(req.admin._id)) return res.status(403).json({ message: 'Access denied' });
     } else if (String(question.createdBy) !== String(req.admin._id)) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -138,9 +138,9 @@ export const deleteQuestion = async (req, res) => {
     const question = await Question.findById(req.params.id);
     if (!question) return res.status(404).json({ message: 'Question not found' });
 
-    if (question.testId) {
-      const test = await Test.findOne({ _id: question.testId, createdBy: req.admin._id });
-      if (!test) return res.status(403).json({ message: 'Access denied' });
+    if (question.testIds && question.testIds.length > 0) {
+      const test = await Test.findOne({ _id: { $in: question.testIds }, createdBy: req.admin._id });
+      if (!test && String(question.createdBy) !== String(req.admin._id)) return res.status(403).json({ message: 'Access denied' });
     } else if (String(question.createdBy) !== String(req.admin._id)) {
       return res.status(403).json({ message: 'Access denied' });
     }
@@ -172,21 +172,19 @@ export const getQuestionsBySubject = async (req, res) => {
 
     const matchStage = testIds.length ? {
       $or: [
-        { testId: { $in: testIds } },
-        { createdBy: req.admin._id, testId: { $exists: false } },
-        { createdBy: req.admin._id, testId: null },
+        { testIds: { $in: testIds } },
+        { createdBy: req.admin._id, testIds: { $size: 0 } },
       ],
     } : {
       $or: [
-        { createdBy: req.admin._id, testId: { $exists: false } },
-        { createdBy: req.admin._id, testId: null },
+        { createdBy: req.admin._id, testIds: { $size: 0 } },
       ],
     };
     if (difficulty) matchStage.difficulty = difficulty;
     
     // Add additional filters if provided
     if (testId) {
-      matchStage.testId = new mongoose.Types.ObjectId(testId);
+      matchStage.testIds = new mongoose.Types.ObjectId(testId);
     }
     // Note: subjects are typically strings in this schema, so subjectId might not apply directly 
     // to the subject field unless it's an ObjectId. We'll support it generically to avoid 500s.
@@ -217,7 +215,9 @@ export const getQuestionsBySubject = async (req, res) => {
       hard:      g.hard,
       questions: g.questions.map((q) => ({
         ...q,
-        testTitle: testMap[String(q.testId)] || '—',
+        testTitle: q.testIds && q.testIds.length > 0 
+          ? q.testIds.map(id => testMap[String(id)]).filter(Boolean).join(', ') 
+          : '—',
       })),
     }));
 
@@ -227,3 +227,35 @@ export const getQuestionsBySubject = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// POST /api/admin/questions/link
+export const linkQuestions = async (req, res) => {
+  try {
+    const { testId, questionIds } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(testId)) {
+      return res.status(400).json({ message: 'Invalid test ID' });
+    }
+    
+    const test = await Test.findOne({ _id: testId, createdBy: req.admin._id });
+    if (!test) {
+      return res.status(404).json({ message: 'Test not found or access denied' });
+    }
+
+    if (!Array.isArray(questionIds) || questionIds.length === 0) {
+      return res.status(400).json({ message: 'questionIds must be a non-empty array' });
+    }
+
+    // Add testId to the testIds array of all specified questions if not already there,
+    // ensuring the questions belong to the same admin.
+    await Question.updateMany(
+      { _id: { $in: questionIds }, createdBy: req.admin._id },
+      { $addToSet: { testIds: test._id } }
+    );
+
+    res.json({ success: true, message: 'Questions linked successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+

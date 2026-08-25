@@ -15,7 +15,7 @@ export const submitTest = async (req, res) => {
     const priorCount = await Attempt.countDocuments({ email: user.email, testId });
     const attemptNumber = priorCount + 1;
 
-    const questions = await Question.find({ testId });
+    const questions = await Question.find({ testIds: testId });
 
     let score = 0;
     const gradedAnswers = questions.map((q) => {
@@ -68,7 +68,7 @@ export const getResultById = async (req, res) => {
     if (!attempt) return res.status(404).json({ message: 'Result not found' });
 
     // Attach question details + correct answers for review
-    const questions = await Question.find({ testId: attempt.testId._id });
+    const questions = await Question.find({ testIds: attempt.testId._id });
     const qMap = Object.fromEntries(questions.map((q) => [String(q._id), q]));
 
     const detailed = attempt.answers.map((a) => ({

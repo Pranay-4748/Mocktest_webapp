@@ -2,12 +2,11 @@ import mongoose from 'mongoose';
 
 const questionSchema = new mongoose.Schema(
   {
-    testId: {
+    testIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Test',
-      required: false,
       index: true,
-    },
+    }],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',

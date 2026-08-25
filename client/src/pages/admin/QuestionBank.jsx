@@ -425,13 +425,7 @@ export default function QuestionBank() {
               </div>
             )}
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Test</label>
-              <select name="testId" value={form.testId} onChange={handleField} className="input">
-                <option value="">Select a test</option>
-                {tests.map((t) => <option key={t._id} value={t._id}>{t.title}</option>)}
-              </select>
-            </div>
+
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Question *</label>

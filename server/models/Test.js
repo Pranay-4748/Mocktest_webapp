@@ -56,7 +56,7 @@ const testSchema = new mongoose.Schema(
 testSchema.virtual('questionCount', {
   ref: 'Question',
   localField: '_id',
-  foreignField: 'testId',
+  foreignField: 'testIds',
   count: true,
 });
 

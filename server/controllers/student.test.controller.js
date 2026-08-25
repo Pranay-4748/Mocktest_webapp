@@ -19,7 +19,7 @@ export const getTestWithQuestions = async (req, res) => {
     const test = await Test.findOne({ _id: req.params.id, status: 'published' });
     if (!test) return res.status(404).json({ message: 'Test not found' });
 
-    let questions = await Question.find({ testId: test._id })
+    let questions = await Question.find({ testIds: test._id })
       .select('-correctAnswer -explanation');
 
     if (test.randomQuestions) questions = questions.sort(() => Math.random() - 0.5);

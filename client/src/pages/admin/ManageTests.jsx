@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
@@ -32,6 +32,7 @@ function Field({ label, required, children }) {
 
 export default function ManageTests() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [tests, setTests]         = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [loading, setLoading]     = useState(true);
@@ -78,8 +79,10 @@ export default function ManageTests() {
     setFormError(''); setSaving(true);
     try {
       if (!editing) {
-        await api.post('/admin/tests', form);
+        const { data } = await api.post('/admin/tests', form);
         toast.success('Test created successfully');
+        navigate(`/admin/tests/${data.test._id}/questions`);
+        return;
       } else {
         await api.put(`/admin/tests/${editing._id}`, form);
         toast.success('Test updated successfully');

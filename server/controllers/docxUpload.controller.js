@@ -55,7 +55,7 @@ export const importDocx = async (req, res) => {
     }
 
     const docs = questions.map((q) => ({
-      testId: testId || undefined,
+      testIds: testId ? [testId] : [],
       createdBy: req.admin._id,
       question: q.question,
       options: q.options,

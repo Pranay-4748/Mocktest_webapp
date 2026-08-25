@@ -1,7 +1,7 @@
 import express from 'express';
 import {
   getQuestions, getQuestionById, createQuestion, updateQuestion, deleteQuestion,
-  getQuestionsBySubject,
+  getQuestionsBySubject, linkQuestions,
 } from '../controllers/question.controller.js';
 import { previewDocx, importDocx } from '../controllers/docxUpload.controller.js';
 import { protectAdmin } from '../middleware/auth.js';
@@ -18,6 +18,7 @@ router.post('/import-docx',  importDocx);
 router.get('/by-subject', getQuestionsBySubject);
 router.get('/',     getQuestions);
 router.get('/:id',  getQuestionById);
+router.post('/link', linkQuestions);
 router.post('/',    validateQuestion, createQuestion);
 router.put('/:id',  validateQuestion, updateQuestion);
 router.delete('/:id', deleteQuestion);

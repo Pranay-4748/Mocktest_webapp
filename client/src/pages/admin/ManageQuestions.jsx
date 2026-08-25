@@ -5,6 +5,7 @@ import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Spinner from '../../components/common/Spinner';
 import UploadQuestionsModal from '../../components/common/UploadQuestionsModal';
+import SelectQuestionsModal from '../../components/common/SelectQuestionsModal';
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D'];
 const DIFFICULTIES  = ['easy', 'medium', 'hard'];
@@ -39,6 +40,7 @@ export default function ManageQuestions() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting]     = useState(false);
   const [showUpload, setShowUpload]  = useState(false);
+  const [showSelectBank, setShowSelectBank] = useState(false);
 
   // Load tests for the selector dropdown
   useEffect(() => {
@@ -160,6 +162,17 @@ export default function ManageQuestions() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
             Upload DOCX
+          </button>
+          <button
+            onClick={() => setShowSelectBank(true)}
+            disabled={!selectedTest}
+            title={!selectedTest ? 'Select a test first' : ''}
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            From Bank
           </button>
           <button
             onClick={openCreate}
@@ -382,6 +395,17 @@ export default function ManageQuestions() {
           testId={selectedTest}
           onClose={() => setShowUpload(false)}
           onImported={() => fetchQuestions(1)}
+        />
+      )}
+
+      {showSelectBank && selectedTest && (
+        <SelectQuestionsModal
+          testId={selectedTest}
+          onClose={() => setShowSelectBank(false)}
+          onLinked={() => {
+            setShowSelectBank(false);
+            fetchQuestions(1);
+          }}
         />
       )}
 
