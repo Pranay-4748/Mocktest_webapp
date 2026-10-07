@@ -56,6 +56,31 @@ export default function DashboardPage() {
   const testPages  = Math.ceil(tests.length / PAGE_SIZE);
   const pagedTests = tests.slice((testPage - 1) * PAGE_SIZE, testPage * PAGE_SIZE);
 
+  // Group practice attempts by topic for Mastery Analytics
+  const topicMastery = Object.values(
+    attempts.reduce((acc, a) => {
+      if (!a.practiceTopic) return acc;
+      const t = a.practiceTopic.trim().toLowerCase();
+      // Capitalize first letter of topic for display
+      const displayTopic = t.charAt(0).toUpperCase() + t.slice(1);
+      
+      if (!acc[t]) acc[t] = { topic: displayTopic, sumPercentage: 0, count: 0, difficulties: {} };
+      
+      acc[t].sumPercentage += a.percentage || 0;
+      acc[t].count += 1;
+      
+      const diff = a.practiceDifficulty || 'mixed';
+      if (!acc[t].difficulties[diff]) acc[t].difficulties[diff] = { sum: 0, count: 0 };
+      acc[t].difficulties[diff].sum += a.percentage || 0;
+      acc[t].difficulties[diff].count += 1;
+      
+      return acc;
+    }, {})
+  ).map(item => ({
+    ...item,
+    masteryPercentage: Math.round(item.sumPercentage / item.count) || 0,
+  })).sort((a, b) => b.masteryPercentage - a.masteryPercentage);
+
   // theme helpers
   const page    = dark ? 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900' : 'bg-gray-100';
   const card    = dark ? 'bg-white/10 backdrop-blur-xl border border-white/15' : 'bg-white border border-gray-100 shadow-sm';
@@ -109,6 +134,7 @@ export default function DashboardPage() {
             {[
               { key: 'attempts', label: 'Recent Attempts' },
               { key: 'tests',    label: `Available Tests${tests.length ? ` (${tests.length})` : ''}` },
+              { key: 'mastery',  label: 'Topic Mastery 🏆' },
             ].map(({ key, label }) => (
               <button key={key} onClick={() => setTab(key)}
                 className={`px-4 py-1.5 text-sm rounded-lg font-medium transition cursor-pointer ${
@@ -179,6 +205,61 @@ export default function DashboardPage() {
               </div>
               <Pagination page={attPage} pages={attPages} total={groupedAttempts.length} limit={PAGE_SIZE} onPage={setAttPage} />
             </>
+          )
+
+        ) : tab === 'mastery' ? (
+          topicMastery.length === 0 ? (
+            <div className={`${emptyCard} rounded-2xl p-8 text-center`}>
+              <p className={`text-lg mb-3 ${title}`}>No topic practice data yet</p>
+              <p className={`text-sm mb-4 ${sub}`}>Take some Topic Practice tests to see your mastery levels here.</p>
+              <Link to="/practice"
+                className="inline-block bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white px-5 py-2 rounded-xl text-sm font-semibold transition cursor-pointer">
+                Start Practice
+              </Link>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {topicMastery.map((tm, idx) => {
+                const getLevel = (pct) => {
+                  if (pct >= 80) return { label: 'Mastered', color: 'text-emerald-500', bg: 'bg-emerald-500' };
+                  if (pct >= 50) return { label: 'Intermediate', color: 'text-amber-500', bg: 'bg-amber-500' };
+                  return { label: 'Needs Work', color: 'text-red-500', bg: 'bg-red-500' };
+                };
+                const lvl = getLevel(tm.masteryPercentage);
+                
+                return (
+                  <div key={idx} className={`${card} rounded-2xl p-5`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className={`font-bold text-lg ${title}`}>{tm.topic}</h3>
+                        <p className={`text-xs ${sub}`}>{tm.count} attempt{tm.count !== 1 ? 's' : ''}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-xl font-bold ${lvl.color}`}>{tm.masteryPercentage}%</span>
+                        <p className={`text-xs font-semibold ${lvl.color}`}>{lvl.label}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className={`w-full h-2.5 rounded-full overflow-hidden mt-3 ${dark ? 'bg-white/10' : 'bg-gray-100'}`}>
+                      <div className={`h-full transition-all duration-500 ${lvl.bg}`} style={{ width: `${tm.masteryPercentage}%` }} />
+                    </div>
+
+                    {/* Breakdown by difficulty */}
+                    <div className="mt-4 flex gap-2 flex-wrap">
+                      {Object.entries(tm.difficulties).map(([diff, stats]) => {
+                        const pct = Math.round(stats.sum / stats.count);
+                        return (
+                          <div key={diff} className={`text-[10px] px-2 py-1 rounded-md border ${dark ? 'bg-white/5 border-white/10 text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                            <span className="capitalize font-semibold">{diff}:</span> {pct}% ({stats.count})
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )
 
         ) : (
