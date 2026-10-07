@@ -97,12 +97,16 @@ export function parseWithRules(rawText) {
     question: q.question,
     options: q.options,
     correctAnswer: q.correctAnswer >= 0 && q.correctAnswer < q.options.length ? q.correctAnswer : 0,
-    explanation: q.explanation || ''
+    explanation: q.explanation || '',
+    subject: '',
+    topic: '',
+    difficulty: 'pre'
   }));
 }
 
 const SYSTEM_PROMPT = `You are an expert MCQ question extractor. Given raw text from a document, extract ALL multiple choice questions.
-Return a valid JSON object matching the requested schema. Each question must include a question text, options array, a zero-based correctAnswer index, and an explanation.`;
+Return a valid JSON object matching the requested schema. Each question must include a question text, options array, a zero-based correctAnswer index, and an explanation.
+Additionally, logically infer and assign a 'subject' (e.g. Maths, Science, History), a specific 'topic' (e.g. Algebra, Physics, Mughal Empire), and a 'difficulty' ('pre', 'mains', or 'advance').`;
 
 export async function parseWithAI(rawText) {
   let extractedVia = 'AI';
@@ -130,9 +134,12 @@ export async function parseWithAI(rawText) {
               items: { type: "string" }
             },
             correctAnswer: { type: "integer" },
-            explanation: { type: "string" }
+            explanation: { type: "string" },
+            subject: { type: "string", description: "The broad subject, e.g. Maths, Reasoning, General Knowledge" },
+            topic: { type: "string", description: "The specific topic, e.g. Percentage, Number Series, History" },
+            difficulty: { type: "string", description: "Must be one of: 'pre', 'mains', 'advance'" }
           },
-          required: ["question", "options", "correctAnswer", "explanation"]
+          required: ["question", "options", "correctAnswer", "explanation", "subject", "topic", "difficulty"]
         }
       }
     },
@@ -185,6 +192,9 @@ export async function parseWithAI(rawText) {
           options: q.options.map((o) => String(o).trim()),
           correctAnswer: q.correctAnswer,
           explanation: q.explanation || '',
+          subject: q.subject || '',
+          topic: q.topic || '',
+          difficulty: ['pre', 'mains', 'advance'].includes(q.difficulty) ? q.difficulty : 'pre',
         });
       }
     });

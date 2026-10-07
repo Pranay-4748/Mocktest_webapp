@@ -40,8 +40,16 @@ const attemptSchema = new mongoose.Schema(
     testId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Test',
-      required: [true, 'Test ID is required'],
       index: true,
+      // Optional for dynamically generated practice tests
+    },
+    practiceTopic: {
+      type: String,
+      trim: true,
+    },
+    practiceDifficulty: {
+      type: String,
+      trim: true,
     },
     answers: {
       type: [answerSchema],

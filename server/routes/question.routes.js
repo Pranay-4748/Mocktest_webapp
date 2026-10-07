@@ -15,6 +15,10 @@ router.use(protectAdmin);
 router.post('/preview-docx', uploadDocx.single('file'), previewDocx);
 router.post('/import-docx',  importDocx);
 
+// Add PDF aliases that use the exact same logic (since docxUpload controller supports both)
+router.post('/preview-pdf', uploadDocx.single('file'), previewDocx);
+router.post('/import-pdf',  importDocx);
+
 router.get('/by-subject', getQuestionsBySubject);
 router.get('/',     getQuestions);
 router.get('/:id',  getQuestionById);

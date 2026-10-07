@@ -103,19 +103,28 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className={`flex gap-1 rounded-xl p-1 mb-5 w-fit ${tabBar}`}>
-          {[
-            { key: 'attempts', label: 'Recent Attempts' },
-            { key: 'tests',    label: `Available Tests${tests.length ? ` (${tests.length})` : ''}` },
-          ].map(({ key, label }) => (
-            <button key={key} onClick={() => setTab(key)}
-              className={`px-4 py-1.5 text-sm rounded-lg font-medium transition cursor-pointer ${
-                tab === key ? 'bg-indigo-600 text-white shadow-sm' : tabInactive
-              }`}>
-              {label}
-            </button>
-          ))}
+        {/* Tabs and Practice Link */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div className={`flex gap-1 rounded-xl p-1 w-fit ${tabBar}`}>
+            {[
+              { key: 'attempts', label: 'Recent Attempts' },
+              { key: 'tests',    label: `Available Tests${tests.length ? ` (${tests.length})` : ''}` },
+            ].map(({ key, label }) => (
+              <button key={key} onClick={() => setTab(key)}
+                className={`px-4 py-1.5 text-sm rounded-lg font-medium transition cursor-pointer ${
+                  tab === key ? 'bg-indigo-600 text-white shadow-sm' : tabInactive
+                }`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <Link to="/practice" className="flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-md shadow-emerald-500/20 transition cursor-pointer">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Topic Practice
+          </Link>
         </div>
 
         {loading ? (

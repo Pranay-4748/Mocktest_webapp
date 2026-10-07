@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../../api/axios';
 import Spinner from '../../components/common/Spinner';
 import { useAuth } from '../../context/AuthContext';
 
 export default function TestPage() {
   const { id }   = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -33,7 +34,11 @@ export default function TestPage() {
   useEffect(() => { pausedRef.current  = paused;  }, [paused]);
 
   useEffect(() => {
-    api.get(`/tests/${id}`)
+    const fetchUrl = id === 'practice' 
+      ? `/tests/generate?${searchParams.toString()}` 
+      : `/tests/${id}`;
+
+    api.get(fetchUrl)
       .then(({ data }) => {
         setTest(data.test);
         setQuestions(data.questions);
@@ -42,7 +47,7 @@ export default function TestPage() {
       })
       .catch((err) => setError(err.response?.data?.message || 'Failed to load test'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, searchParams]);
 
   const doSubmit = useCallback(async () => {
     if (submittingRef.current) return;
@@ -51,7 +56,19 @@ export default function TestPage() {
     try {
       const payload   = questions.map((q) => ({ questionId: q._id, selectedOption: answersRef.current[q._id] ?? -1 }));
       const timeTaken = Math.round((Date.now() - startTime.current) / 1000);
-      const { data }  = await api.post('/results/submit', { testId: id, answers: payload, timeTaken });
+      
+      const submitData = { 
+        testId: id === 'practice' ? 'practice-mode' : id, 
+        answers: payload, 
+        timeTaken,
+      };
+
+      if (id === 'practice') {
+        submitData.practiceTopic = searchParams.get('topic') || '';
+        submitData.practiceDifficulty = searchParams.get('difficulty') || '';
+      }
+
+      const { data }  = await api.post('/results/submit', submitData);
       // exit fullscreen before navigating so the fs listener doesn't re-fire
       if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
       navigate(`/results/${data.attemptId}`);
@@ -60,7 +77,7 @@ export default function TestPage() {
       setSubmitting(false);
       submittingRef.current = false;
     }
-  }, [questions, id, navigate]);
+  }, [questions, id, navigate, searchParams]);
 
   // keep ref in sync so fullscreen listener always calls latest version
   useEffect(() => { doSubmitRef.current = doSubmit; }, [doSubmit]);

@@ -50,13 +50,18 @@ const questionSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    topic: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     difficulty: {
       type: String,
       enum: {
-        values: ['easy', 'medium', 'hard'],
-        message: 'Difficulty must be easy, medium, or hard',
+        values: ['easy', 'medium', 'hard', 'pre', 'mains', 'advance'],
+        message: 'Difficulty must be easy, medium, hard, pre, mains, or advance',
       },
-      default: 'medium',
+      default: 'pre',
     },
   },
   { timestamps: true }

@@ -63,7 +63,8 @@ export const importDocx = async (req, res) => {
       explanation: q.explanation || '',
       marks: q.marks || 1,
       subject: subject || q.subject || '',
-      difficulty: q.difficulty || 'medium',
+      topic: q.topic || '',
+      difficulty: q.difficulty || 'pre',
     }));
 
     const inserted = await Question.insertMany(docs, { ordered: false });

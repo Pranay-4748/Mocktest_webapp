@@ -5,17 +5,31 @@ import Question from '../models/Question.js';
 // POST /api/results/submit
 export const submitTest = async (req, res) => {
   try {
-    const { testId, answers, timeTaken } = req.body; // answers: [{ questionId, selectedOption }]
+    const { testId, answers, timeTaken, practiceTopic, practiceDifficulty } = req.body; // answers: [{ questionId, selectedOption }]
     const user = req.user;
 
-    const test = await Test.findOne({ _id: testId, status: 'published' });
-    if (!test) return res.status(404).json({ message: 'Test not found' });
+    let test;
+    let priorCount = 0;
+    let questions = [];
+    let savedTestId = testId;
 
-    // Count how many times this user has attempted this test before
-    const priorCount = await Attempt.countDocuments({ email: user.email, testId });
-    const attemptNumber = priorCount + 1;
-
-    const questions = await Question.find({ testIds: testId });
+    if (testId === 'practice-mode') {
+      // Dynamic Practice Test
+      const qIds = answers.map((a) => a.questionId);
+      questions = await Question.find({ _id: { $in: qIds } });
+      const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+      test = {
+        totalMarks,
+        passingMarks: Math.ceil(totalMarks * 0.4), // 40% to pass
+      };
+      savedTestId = undefined;
+    } else {
+      // Standard Test
+      test = await Test.findOne({ _id: testId, status: 'published' });
+      if (!test) return res.status(404).json({ message: 'Test not found' });
+      priorCount = await Attempt.countDocuments({ email: user.email, testId });
+      questions = await Question.find({ testIds: testId });
+    }
 
     let score = 0;
     const gradedAnswers = questions.map((q) => {
@@ -33,16 +47,18 @@ export const submitTest = async (req, res) => {
     const attempt = await Attempt.create({
       userName: user.name,
       email: user.email,
-      testId,
+      testId: savedTestId,
+      practiceTopic,
+      practiceDifficulty,
       answers: gradedAnswers,
       score,
       percentage: Math.round(percentage * 100) / 100,
       passed,
       timeTaken: timeTaken || 0,
-      attemptNumber,
+      attemptNumber: priorCount + 1,
     });
 
-    res.status(201).json({ success: true, attemptId: attempt._id, score, percentage, passed, attemptNumber });
+    res.status(201).json({ success: true, attemptId: attempt._id, score, percentage, passed, attemptNumber: priorCount + 1 });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -68,11 +84,12 @@ export const getResultById = async (req, res) => {
     if (!attempt) return res.status(404).json({ message: 'Result not found' });
 
     // Attach question details + correct answers for review
-    const questions = await Question.find({ testIds: attempt.testId._id });
+    const qIds = attempt.answers.map((a) => a.questionId);
+    const questions = await Question.find({ _id: { $in: qIds } });
     const qMap = Object.fromEntries(questions.map((q) => [String(q._id), q]));
 
     const detailed = attempt.answers.map((a) => ({
-      ...a,
+      ...a.toObject ? a.toObject() : a,
       question: qMap[String(a.questionId)],
     }));
 

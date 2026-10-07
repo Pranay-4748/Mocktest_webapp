@@ -16,6 +16,7 @@ import DashboardPage from './pages/student/DashboardPage';
 import TestListPage from './pages/student/TestListPage';
 import TestPage from './pages/student/TestPage';
 import ResultPage from './pages/student/ResultPage';
+import TopicPracticePage from './pages/student/TopicPracticePage';
 
 // Admin Pages
 import AdminDashboard     from './pages/admin/AdminDashboard';
@@ -40,6 +41,7 @@ export default function App() {
           {/* Student Protected */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/practice" element={<TopicPracticePage />} />
             <Route path="/tests" element={<TestListPage />} />
             <Route path="/tests/:id" element={<TestPage />} />
             <Route path="/results/:id" element={<ResultPage />} />
