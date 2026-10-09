@@ -1,4 +1,4 @@
-# TestSeries — MCQ Mock Test Web App
+# TestSeries — Government Exam Prep Platform (MCQ Web App)
 
 ## Tech Stack
 - **Frontend**: React 19 + Vite + Tailwind CSS v4 + React Router v6 + Axios

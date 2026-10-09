@@ -22,6 +22,9 @@ const allowedOrigins = process.env.CLIENT_URL
 app.use(helmet());
 app.use(cors({
   origin: (origin, cb) => {
+    // Allow all origins in development mode to prevent local CORS issues
+    if (process.env.NODE_ENV === 'development') return cb(null, true);
+    
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));

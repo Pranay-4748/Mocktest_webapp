@@ -104,9 +104,9 @@ export function parseWithRules(rawText) {
   }));
 }
 
-const SYSTEM_PROMPT = `You are an expert MCQ question extractor. Given raw text from a document, extract ALL multiple choice questions.
+const SYSTEM_PROMPT = `You are an expert MCQ question extractor for Government Exams (like SSC, Banking, Railways). Given raw text from a document, extract ALL multiple choice questions.
 Return a valid JSON object matching the requested schema. Each question must include a question text, options array, a zero-based correctAnswer index, and an explanation.
-Additionally, logically infer and assign a 'subject' (e.g. Maths, Science, History), a specific 'topic' (e.g. Algebra, Physics, Mughal Empire), and a 'difficulty' ('pre', 'mains', or 'advance').`;
+Additionally, logically infer and assign a 'subject' (strictly use one of: Quants, Reasoning, English, General Awareness) and a specific 'topic' (e.g. Profit & Loss, Syllogism, Reading Comprehension, Current Affairs).`;
 
 export async function parseWithAI(rawText) {
   let extractedVia = 'AI';
@@ -135,11 +135,10 @@ export async function parseWithAI(rawText) {
             },
             correctAnswer: { type: "integer" },
             explanation: { type: "string" },
-            subject: { type: "string", description: "The broad subject, e.g. Maths, Reasoning, General Knowledge" },
-            topic: { type: "string", description: "The specific topic, e.g. Percentage, Number Series, History" },
-            difficulty: { type: "string", description: "Must be one of: 'pre', 'mains', 'advance'" }
+            subject: { type: "string", description: "The broad subject (e.g. Quants, Reasoning, English, General Awareness)" },
+            topic: { type: "string", description: "The specific topic (e.g. Percentage, Syllogism, Error Spotting, Current Affairs)" }
           },
-          required: ["question", "options", "correctAnswer", "explanation", "subject", "topic", "difficulty"]
+          required: ["question", "options", "correctAnswer", "explanation", "subject", "topic"]
         }
       }
     },
@@ -148,7 +147,7 @@ export async function parseWithAI(rawText) {
 
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.8-flash',
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
@@ -157,11 +156,19 @@ export async function parseWithAI(rawText) {
 
     const MAX_CHARS = 30000;
     const chunks = [];
-    for (let i = 0; i < rawText.length; i += MAX_CHARS) {
-      chunks.push(rawText.slice(i, i + MAX_CHARS));
+    let i = 0;
+    while (i < rawText.length) {
+      let end = i + MAX_CHARS;
+      if (end < rawText.length) {
+        const lastBreak = rawText.lastIndexOf('\n\n', end);
+        if (lastBreak > i) end = lastBreak;
+      }
+      chunks.push(rawText.slice(i, end));
+      i = end;
     }
 
     const allParsed = [];
+    const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
     for (const chunk of chunks) {
       const prompt = `${SYSTEM_PROMPT}\n\n---DOCUMENT TEXT---\n${chunk}`;
@@ -171,6 +178,7 @@ export async function parseWithAI(rawText) {
       if (obj && Array.isArray(obj.questions)) {
         allParsed.push(...obj.questions);
       }
+      await delay(2000); // Throttle to prevent 429 errors
     }
 
     // Validate and separate good vs bad

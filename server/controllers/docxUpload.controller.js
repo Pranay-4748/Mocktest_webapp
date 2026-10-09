@@ -54,6 +54,11 @@ export const importDocx = async (req, res) => {
       if (!test) return res.status(404).json({ message: 'Test not found' });
     }
 
+    const normalizeTopic = (t) => {
+      if (!t) return 'Uncategorized';
+      return t.toLowerCase().replace(/ and /g, ' & ').replace(/[^a-z0-9\s&]/g, '').replace(/\s+/g, ' ').trim();
+    };
+
     const docs = questions.map((q) => ({
       testIds: testId ? [testId] : [],
       createdBy: req.admin._id,
@@ -63,7 +68,7 @@ export const importDocx = async (req, res) => {
       explanation: q.explanation || '',
       marks: q.marks || 1,
       subject: subject || q.subject || '',
-      topic: q.topic || '',
+      topic: normalizeTopic(q.topic),
       difficulty: q.difficulty || 'pre',
     }));
 

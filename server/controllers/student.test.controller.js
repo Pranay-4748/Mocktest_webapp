@@ -43,16 +43,13 @@ export const getTestWithQuestions = async (req, res) => {
 // GET /api/tests/generate — Generate dynamic topic test
 export const generateTopicTest = async (req, res) => {
   try {
-    const { topic, difficulty, limit = 20 } = req.query;
+    const { topic, limit = 20 } = req.query;
     
     if (!topic) {
       return res.status(400).json({ message: 'Topic is required' });
     }
 
     const filter = { topic: { $regex: new RegExp(`^${topic}$`, 'i') } };
-    if (difficulty) {
-      filter.difficulty = difficulty;
-    }
 
     // Fetch random questions matching the topic
     let questions = await Question.aggregate([
@@ -62,20 +59,19 @@ export const generateTopicTest = async (req, res) => {
     ]);
 
     if (!questions.length) {
-      return res.status(404).json({ message: 'No questions found for this topic/difficulty' });
+      return res.status(404).json({ message: 'No questions found for this topic' });
     }
 
     // Mock a test object for the frontend to render properly
     const test = {
       _id: 'practice-mode',
-      title: `${topic} Practice Test (${difficulty || 'Mixed'})`,
+      title: `${topic} Practice Test (Mixed)`,
       description: 'Dynamically generated practice test based on your selection.',
       duration: questions.length * 1, // 1 minute per question default
       passingMarks: Math.ceil(questions.length * 0.4), // 40% to pass
       totalMarks: questions.length,
       isPractice: true,
       topic,
-      difficulty,
     };
 
     res.json({ success: true, test, questions });

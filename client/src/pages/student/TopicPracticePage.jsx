@@ -14,12 +14,11 @@ export default function TopicPracticePage() {
   const { dark } = useDarkMode();
   const navigate = useNavigate();
   const [topic, setTopic] = useState('');
-  const [difficulty, setDifficulty] = useState('');
 
   const handleStart = (e) => {
     e.preventDefault();
     if (!topic.trim()) return;
-    navigate(`/tests/practice?topic=${encodeURIComponent(topic.trim())}&difficulty=${difficulty}`);
+    navigate(`/tests/practice?topic=${encodeURIComponent(topic.trim())}`);
   };
 
   const page  = dark ? 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900' : 'bg-gray-100';
@@ -43,7 +42,7 @@ export default function TopicPracticePage() {
         <div className="mb-8 text-center animate-fade-in">
           <h1 className={`text-3xl font-bold ${title}`}>Topic-Wise Practice</h1>
           <p className={`text-sm mt-2 ${sub}`}>
-            Generate a dynamic mock test based on a specific topic and difficulty level. Perfect for focused preparation!
+            Generate a dynamic mock test based on a specific topic. All question difficulties will be mixed together! Perfect for comprehensive focused preparation.
           </p>
         </div>
 
@@ -65,22 +64,7 @@ export default function TopicPracticePage() {
             </p>
           </div>
 
-          <div>
-            <label className={`block text-sm font-semibold mb-2 ${dark ? 'text-indigo-200' : 'text-gray-700'}`}>
-              Difficulty Level
-            </label>
-            <select 
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              className={input}
-            >
-              {DIFFICULTIES.map(d => (
-                <option key={d.value} value={d.value} className={dark ? 'bg-slate-800' : ''}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-          </div>
+
 
           <div className="pt-4">
             <button 

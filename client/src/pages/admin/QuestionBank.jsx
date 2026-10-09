@@ -35,7 +35,7 @@ const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 const EMPTY_FORM = {
   question: '', options: ['', '', '', ''], correctAnswer: 0,
-  explanation: '', marks: 1, subject: '', difficulty: 'medium', testId: '',
+  explanation: '', marks: 1, subject: '', topic: '', difficulty: 'medium', testId: '',
 };
 
 export default function QuestionBank() {
@@ -106,6 +106,7 @@ export default function QuestionBank() {
       explanation:  q.explanation || '',
       marks:        q.marks,
       subject:      q.subject || '',
+      topic:        q.topic || '',
       difficulty:   q.difficulty,
       testId:       q.testId ? String(q.testId) : '',
     });
@@ -344,66 +345,89 @@ export default function QuestionBank() {
 
                 {/* ── Questions list ── */}
                 {isOpen && (
-                  <div className="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800">
-                    {group.questions.map((q, qIdx) => (
-                      <div key={q._id} className="px-5 py-4 hover:bg-gray-50/60 dark:hover:bg-gray-800/20 transition-colors">
-                        <div className="flex items-start gap-3">
-                          {/* Number */}
-                          <span className="text-xs text-gray-400 dark:text-gray-500 pt-0.5 w-6 shrink-0 text-right font-medium">
-                            {qIdx + 1}.
+                  <div className="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800 bg-gray-50/30 dark:bg-gray-900/10">
+                    {Object.entries(
+                      group.questions.reduce((acc, q) => {
+                        const t = q.topic?.trim() || 'General / Uncategorized';
+                        if (!acc[t]) acc[t] = [];
+                        acc[t].push(q);
+                        return acc;
+                      }, {})
+                    ).sort(([a], [b]) => a.localeCompare(b)).map(([topic, questionsInTopic]) => (
+                      <div key={topic} className="pb-2">
+                        {/* Topic Header */}
+                        <div className="px-5 py-2 bg-gray-100/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                            {topic}
                           </span>
-
-                          {/* Body */}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
-                              {q.question}
-                            </p>
-
-                            {/* Options row */}
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {q.options.map((opt, i) => (
-                                <span
-                                  key={i}
-                                  className={`text-xs px-2 py-0.5 rounded-lg ${
-                                    i === q.correctAnswer
-                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-semibold ring-1 ring-emerald-300 dark:ring-emerald-700'
-                                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                                  }`}
-                                >
-                                  {OPTION_LABELS[i]}: {opt.length > 30 ? opt.slice(0, 30) + '…' : opt}
+                          <span className="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full font-medium">
+                            {questionsInTopic.length} Qs
+                          </span>
+                        </div>
+                        {/* Topic Questions */}
+                        <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {questionsInTopic.map((q, qIdx) => (
+                            <div key={q._id} className="px-5 py-4 hover:bg-white dark:hover:bg-gray-800/40 transition-colors">
+                              <div className="flex items-start gap-3">
+                                {/* Number */}
+                                <span className="text-xs text-gray-400 dark:text-gray-500 pt-0.5 w-6 shrink-0 text-right font-medium">
+                                  {qIdx + 1}.
                                 </span>
-                              ))}
-                            </div>
 
-                            {/* Meta */}
-                            <div className="flex items-center gap-3 mt-2 flex-wrap">
-                              <span className={`badge capitalize ${DIFF_COLORS[q.difficulty]}`}>{q.difficulty}</span>
-                              <span className="text-xs text-gray-400 dark:text-gray-500">
-                                {q.marks} mark{q.marks !== 1 ? 's' : ''}
-                              </span>
-                              {q.testTitle && (
-                                <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                  {q.testTitle}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                                {/* Body */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
+                                    {q.question}
+                                  </p>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => openEdit(q)}
-                              className="btn btn-ghost text-xs px-2.5 py-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
-                            >Edit</button>
-                            <button
-                              onClick={() => setDeleteTarget(q)}
-                              className="btn btn-ghost text-xs px-2.5 py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
-                            >Delete</button>
-                          </div>
+                                  {/* Options row */}
+                                  <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {q.options.map((opt, i) => (
+                                      <span
+                                        key={i}
+                                        className={`text-xs px-2 py-0.5 rounded-lg ${
+                                          i === q.correctAnswer
+                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-semibold ring-1 ring-emerald-300 dark:ring-emerald-700'
+                                            : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                        }`}
+                                      >
+                                        {OPTION_LABELS[i]}: {opt.length > 30 ? opt.slice(0, 30) + '…' : opt}
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  {/* Meta */}
+                                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                    <span className={`badge capitalize ${DIFF_COLORS[q.difficulty]}`}>{q.difficulty}</span>
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                                      {q.marks} mark{q.marks !== 1 ? 's' : ''}
+                                    </span>
+                                    {q.testTitle && (
+                                      <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        {q.testTitle}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    onClick={() => openEdit(q)}
+                                    className="btn btn-ghost text-xs px-2.5 py-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                                  >Edit</button>
+                                  <button
+                                    onClick={() => setDeleteTarget(q)}
+                                    className="btn btn-ghost text-xs px-2.5 py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                  >Delete</button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
@@ -462,10 +486,14 @@ export default function QuestionBank() {
                 placeholder="Optional explanation..." className="input resize-none" />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Subject</label>
-                <input name="subject" value={form.subject} onChange={handleField} placeholder="e.g. Math" className="input" />
+                <input name="subject" value={form.subject} onChange={handleField} placeholder="e.g. Quants" className="input" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Topic</label>
+                <input name="topic" value={form.topic} onChange={handleField} placeholder="e.g. Profit & Loss" className="input" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Difficulty</label>

@@ -1,4 +1,5 @@
 import Subject from '../models/Subject.js';
+import Question from '../models/Question.js';
 
 // GET /api/admin/subjects
 export const getSubjects = async (req, res) => {
@@ -38,7 +39,8 @@ export const deleteSubject = async (req, res) => {
     if (!subject) return res.status(404).json({ message: 'Subject not found' });
     
     await subject.deleteOne();
-    res.json({ success: true, message: 'Subject deleted' });
+    await Question.updateMany({ subject: subject.name, createdBy: req.admin._id }, { subject: 'Uncategorized' });
+    res.json({ success: true, message: 'Subject deleted and questions uncategorized' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
