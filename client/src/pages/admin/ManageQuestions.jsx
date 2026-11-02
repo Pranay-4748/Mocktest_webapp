@@ -127,9 +127,7 @@ export default function ManageQuestions() {
     e.preventDefault();
     setFormError(''); setSaving(true);
     try {
-      const topicValue = form.topic === '__new__' ? (form._newTopic || '').trim() : form.topic;
-      const payload = { ...form, topic: topicValue, correctAnswer: Number(form.correctAnswer), marks: Number(form.marks) };
-      delete payload._newTopic;
+      const payload = { ...form, correctAnswer: Number(form.correctAnswer), marks: Number(form.marks) };
       if (modal === 'create') {
         await api.post('/admin/questions', payload);
       } else {
@@ -390,16 +388,7 @@ export default function ManageQuestions() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50">
                   <option value="">— None —</option>
                   {topics.map(t => <option key={t} value={t}>{t}</option>)}
-                  <option value="__new__">+ New topic…</option>
                 </select>
-                {form.topic === '__new__' && (
-                  <input
-                    placeholder="Enter new topic"
-                    value={form._newTopic || ''}
-                    onChange={e => setForm(f => ({ ...f, _newTopic: e.target.value }))}
-                    className="mt-1.5 w-full px-3 py-1.5 border border-indigo-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
