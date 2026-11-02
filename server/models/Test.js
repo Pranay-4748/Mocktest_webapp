@@ -28,6 +28,11 @@ const testSchema = new mongoose.Schema(
       required: [true, 'Total marks are required'],
       min: [1, 'Total marks must be at least 1'],
     },
+    totalQuestions: {
+      type: Number,
+      min: [1, 'Total questions must be at least 1'],
+      default: null,
+    },
     randomQuestions: {
       type: Boolean,
       default: false,

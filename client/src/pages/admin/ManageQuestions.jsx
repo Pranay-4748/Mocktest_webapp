@@ -18,7 +18,7 @@ const DIFF_COLORS = {
 
 const EMPTY_FORM = {
   question: '', options: ['', '', '', ''], correctAnswer: 0,
-  explanation: '', marks: 1, subject: '', difficulty: 'medium',
+  explanation: '', marks: 1, subject: '', topic: '', difficulty: 'medium',
 };
 
 export default function ManageQuestions() {
@@ -41,6 +41,22 @@ export default function ManageQuestions() {
   const [deleting, setDeleting]     = useState(false);
   const [showUpload, setShowUpload]  = useState(false);
   const [showSelectBank, setShowSelectBank] = useState(false);
+  const [subjects, setSubjects]       = useState([]);
+  const [topics, setTopics]           = useState([]);
+
+  useEffect(() => {
+    api.get('/admin/subjects').then(({ data }) => setSubjects(data.subjects || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setTopics([]);
+    if (!form.subject) return;
+    const subj = subjects.find(s => s.name === form.subject);
+    if (!subj) return;
+    api.get(`/admin/subjects/${subj._id}/topics`)
+      .then(({ data }) => setTopics(data.topics || []))
+      .catch(() => {});
+  }, [form.subject, subjects]);
 
   // Load tests for the selector dropdown
   useEffect(() => {
@@ -86,7 +102,8 @@ export default function ManageQuestions() {
       correctAnswer: q.correctAnswer,
       explanation: q.explanation,
       marks: q.marks,
-      subject: q.subject,
+      subject: q.subject || '',
+      topic: q.topic || '',
       difficulty: q.difficulty,
       testId: q.testId?._id || q.testId,
     });
@@ -110,7 +127,9 @@ export default function ManageQuestions() {
     e.preventDefault();
     setFormError(''); setSaving(true);
     try {
-      const payload = { ...form, correctAnswer: Number(form.correctAnswer), marks: Number(form.marks) };
+      const topicValue = form.topic === '__new__' ? (form._newTopic || '').trim() : form.topic;
+      const payload = { ...form, topic: topicValue, correctAnswer: Number(form.correctAnswer), marks: Number(form.marks) };
+      delete payload._newTopic;
       if (modal === 'create') {
         await api.post('/admin/questions', payload);
       } else {
@@ -209,15 +228,17 @@ export default function ManageQuestions() {
           <option value="">All Difficulties</option>
           {DIFFICULTIES.map((d) => <option key={d} value={d} className="capitalize">{d}</option>)}
         </select>
-        <input
-          type="text" placeholder="Filter by subject..." value={subjectFilter}
-          onChange={(e) => setSubjectFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        />
+        <select
+          value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        >
+          <option value="">All Subjects</option>
+          {subjects.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
+        </select>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="card overflow-hidden dark:bg-gray-900">
         {loading ? (
           <div className="py-20"><Spinner /></div>
         ) : questions.length === 0 ? (
@@ -263,11 +284,11 @@ export default function ManageQuestions() {
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEdit(q)}
-                        className="text-xs px-2.5 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition">
+                        className="text-xs px-2.5 py-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition cursor-pointer">
                         Edit
                       </button>
                       <button onClick={() => setDeleteTarget(q)}
-                        className="text-xs px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition">
+                        className="text-xs px-2.5 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition cursor-pointer">
                         Delete
                       </button>
                     </div>
@@ -277,9 +298,7 @@ export default function ManageQuestions() {
             </tbody>
           </table>
         )}
-      </div>
-
-      {/* Pagination */}
+        </div>
       {pagination.pages > 1 && (
         <div className="flex justify-center gap-2 mt-5">
           {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((p) => (
@@ -328,7 +347,7 @@ export default function ManageQuestions() {
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, correctAnswer: i }))}
-                      className={`w-8 h-8 rounded-full text-sm font-bold shrink-0 transition border-2 ${
+                      className={`w-8 h-8 rounded-full text-sm font-bold shrink-0 transition border-2 cursor-pointer ${
                         form.correctAnswer === i
                           ? 'bg-green-500 border-green-500 text-white'
                           : 'border-gray-300 text-gray-500 hover:border-green-400'
@@ -355,13 +374,35 @@ export default function ManageQuestions() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none" />
             </div>
 
-            {/* Subject / Difficulty / Marks */}
-            <div className="grid grid-cols-3 gap-3">
+            {/* Subject / Topic / Difficulty / Marks */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                <input name="subject" value={form.subject} onChange={handleField} placeholder="e.g. Math"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                <select name="subject" value={form.subject} onChange={handleField}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                  <option value="">— None —</option>
+                  {subjects.map(s => <option key={s._id} value={s.name}>{s.name}</option>)}
+                </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+                <select name="topic" value={form.topic} onChange={handleField} disabled={!form.subject}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50">
+                  <option value="">— None —</option>
+                  {topics.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="__new__">+ New topic…</option>
+                </select>
+                {form.topic === '__new__' && (
+                  <input
+                    placeholder="Enter new topic"
+                    value={form._newTopic || ''}
+                    onChange={e => setForm(f => ({ ...f, _newTopic: e.target.value }))}
+                    className="mt-1.5 w-full px-3 py-1.5 border border-indigo-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
                 <select name="difficulty" value={form.difficulty} onChange={handleField}

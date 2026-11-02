@@ -13,16 +13,23 @@ export default function SelectQuestionsModal({ testId, onClose, onLinked }) {
   const [search, setSearch] = useState('');
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('');
+  const [topics, setTopics] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState('');
 
   useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const { data } = await api.get('/admin/subjects');
-        setSubjects(data.subjects || []);
-      } catch (err) {}
-    };
-    fetchSubjects();
+    api.get('/admin/subjects').then(({ data }) => setSubjects(data.subjects || [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setSelectedTopic('');
+    setTopics([]);
+    if (!selectedSubject) return;
+    const subj = subjects.find(s => s.name === selectedSubject);
+    if (!subj) return;
+    api.get(`/admin/subjects/${subj._id}/topics`)
+      .then(({ data }) => setTopics(data.topics || []))
+      .catch(() => {});
+  }, [selectedSubject, subjects]);
 
   useEffect(() => {
     const fetchBank = async () => {
@@ -70,27 +77,37 @@ export default function SelectQuestionsModal({ testId, onClose, onLinked }) {
   const filtered = questions.filter(q => {
     const matchSearch = q.question.toLowerCase().includes(search.toLowerCase()) || (q.subject && q.subject.toLowerCase().includes(search.toLowerCase()));
     const matchSubject = selectedSubject ? q.subject === selectedSubject : true;
-    return matchSearch && matchSubject;
+    const matchTopic = selectedTopic ? q.topic === selectedTopic : true;
+    return matchSearch && matchSubject && matchTopic;
   });
 
   return (
     <Modal title="Select from Question Bank" onClose={onClose} maxWidth="max-w-4xl">
       <div className="space-y-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <input 
             type="text" 
             placeholder="Search by question or subject..." 
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="flex-1 min-w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
           />
           <select
             value={selectedSubject}
             onChange={e => setSelectedSubject(e.target.value)}
-            className="w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
             <option value="">All Subjects</option>
             {subjects.map(s => <option key={s._id} value={s.name}>{s.name}</option>)}
+          </select>
+          <select
+            value={selectedTopic}
+            onChange={e => setSelectedTopic(e.target.value)}
+            disabled={!selectedSubject}
+            className="w-40 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-50"
+          >
+            <option value="">All Topics</option>
+            {topics.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
 
@@ -111,7 +128,8 @@ export default function SelectQuestionsModal({ testId, onClose, onLinked }) {
                     />
                   </th>
                   <th className="px-4 py-2 text-left font-semibold text-gray-600">Question</th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-600 w-32">Subject</th>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-600 w-28">Subject</th>
+                  <th className="px-4 py-2 text-left font-semibold text-gray-600 w-28">Topic</th>
                   <th className="px-4 py-2 text-left font-semibold text-gray-600 w-24">Diff</th>
                 </tr>
               </thead>
@@ -129,6 +147,7 @@ export default function SelectQuestionsModal({ testId, onClose, onLinked }) {
                       <p className="line-clamp-2">{q.question}</p>
                     </td>
                     <td className="px-4 py-2 text-gray-500">{q.subject || '—'}</td>
+                    <td className="px-4 py-2 text-gray-500">{q.topic || '—'}</td>
                     <td className="px-4 py-2">
                       <span className={`text-xs capitalize ${q.difficulty === 'easy' ? 'text-green-600' : q.difficulty === 'hard' ? 'text-red-600' : 'text-yellow-600'}`}>
                         {q.difficulty}

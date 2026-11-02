@@ -70,7 +70,7 @@ export const getQuestionById = async (req, res) => {
 // POST /api/admin/questions
 export const createQuestion = async (req, res) => {
   try {
-    const { testId, question, options, correctAnswer, explanation, marks, subject, difficulty } = req.body;
+    const { testId, question, options, correctAnswer, explanation, marks, subject, topic, difficulty } = req.body;
 
     if (testId) {
       const test = await Test.findOne({ _id: testId, createdBy: req.admin._id });
@@ -86,6 +86,7 @@ export const createQuestion = async (req, res) => {
       explanation: explanation?.trim() || '',
       marks: marks !== undefined ? Number(marks) : 1,
       subject: subject?.trim() || '',
+      topic: topic?.trim() || '',
       difficulty: difficulty || 'medium',
     });
 
@@ -111,7 +112,7 @@ export const updateQuestion = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    const { question: qText, options, correctAnswer, explanation, marks, subject, difficulty } = req.body;
+    const { question: qText, options, correctAnswer, explanation, marks, subject, topic, difficulty } = req.body;
 
     if (qText)          question.question      = qText.trim();
     if (options)        question.options       = options.map((o) => o.trim());
@@ -119,6 +120,7 @@ export const updateQuestion = async (req, res) => {
     if (explanation !== undefined)   question.explanation   = explanation.trim();
     if (marks !== undefined)         question.marks         = Number(marks);
     if (subject !== undefined)       question.subject       = subject.trim();
+    if (topic !== undefined)         question.topic         = topic.trim();
     if (difficulty)     question.difficulty    = difficulty;
 
     await question.save();

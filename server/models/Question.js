@@ -50,6 +50,11 @@ const questionSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    topic: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     difficulty: {
       type: String,
       enum: {

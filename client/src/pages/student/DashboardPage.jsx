@@ -66,7 +66,7 @@ export default function DashboardPage() {
   const rowTitle = dark ? 'text-white' : 'text-gray-800';
   const rowSub  = dark ? 'text-indigo-300/60' : 'text-gray-400';
   const pct     = dark ? 'text-indigo-300' : 'text-indigo-600';
-  const tabBar  = dark ? 'bg-white/8 border border-white/10' : 'bg-gray-100 border border-gray-200';
+  const tabBar  = dark ? 'bg-white/10 border border-white/10' : 'bg-gray-100 border border-gray-200';
   const tabInactive = dark ? 'text-indigo-300/70 hover:text-indigo-200' : 'text-gray-500 hover:text-gray-700';
   const metaText = dark ? 'text-indigo-300/60' : 'text-gray-400';
   const emptyCard = dark ? 'bg-white/10 backdrop-blur-xl border border-white/15' : 'bg-white border border-gray-100 shadow-sm';
@@ -92,7 +92,7 @@ export default function DashboardPage() {
           {[
             { label: 'Tests Attempted', value: attempts.length, icon: '📋' },
             { label: 'Passed',       value: passed,          icon: '✅' },
-            { label: 'Avg Score',    value: `${avg}%`,       icon: '🎯' },
+            { label: 'Avg Score',    value: `${avg}%`,       icon: '📊' },
             { label: 'Accuracy',     value: `${accuracy}%`,  icon: '🎯' },
           ].map(({ label, value, icon }) => (
             <div key={label} className={`${card} rounded-2xl p-5 text-center`}>

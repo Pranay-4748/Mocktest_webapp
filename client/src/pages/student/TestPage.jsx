@@ -164,17 +164,6 @@ export default function TestPage() {
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-white">
 
-      {/* ── Header ── */}
-      {/* <div className="bg-gray-200 px-5 py-2.5 flex items-center justify-between shrink-0">
-        <h1 className="font-bold text-black text-base truncate">{test.title}</h1>
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs font-bold">
-            {user?.name?.[0]?.toUpperCase()}
-          </div>
-          <span className="text-gray-300 text-sm hidden sm:block">{user?.name}</span>
-        </div>
-      </div> */}
-
       {/* ── Sections bar ── */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2 shrink-0">
         <span className="text-xs font-medium text-gray-500 mr-1">Sections</span>
@@ -258,7 +247,7 @@ export default function TestPage() {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className={`font-bold text-sm ${timeLeft < 60 ? 'text-gray-400 animate-pulse' : 'text-black'}`}>
+              <p className={`font-bold text-sm ${timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-black'}`}>
                 Time Left: {fmt(timeLeft ?? 0)}
               </p>
               <p className="text-xs text-gray-500 truncate">{user?.name}</p>

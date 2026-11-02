@@ -45,9 +45,12 @@ export const previewDocx = async (req, res) => {
 // POST /api/admin/questions/import-docx
 export const importDocx = async (req, res) => {
   try {
-    const { testId, subject, questions } = req.body;
+    const { testId, questions } = req.body;
     if (!Array.isArray(questions) || questions.length === 0)
       return res.status(400).json({ message: 'questions[] are required' });
+
+    const invalid = questions.some(q => !q.subject?.trim() || !q.topic?.trim());
+    if (invalid) return res.status(400).json({ message: 'Every question must have a subject and topic' });
 
     if (testId) {
       const test = await Test.findOne({ _id: testId, createdBy: req.admin._id });
@@ -62,7 +65,8 @@ export const importDocx = async (req, res) => {
       correctAnswer: q.correctAnswer,
       explanation: q.explanation || '',
       marks: q.marks || 1,
-      subject: subject || q.subject || '',
+      subject: q.subject.trim(),
+      topic: q.topic.trim(),
       difficulty: q.difficulty || 'medium',
     }));
 

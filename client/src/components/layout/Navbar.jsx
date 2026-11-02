@@ -10,7 +10,7 @@ export default function Navbar() {
   const brand = dark ? 'text-white' : 'text-gray-900';
   const div   = dark ? 'bg-white/20' : 'bg-gray-200';
   const name  = dark ? 'text-indigo-200/80' : 'text-gray-700';
-  const tog   = dark ? 'bg-white/8 hover:bg-white/15 border-white/15 text-indigo-200 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-500 hover:text-gray-900';
+  const tog   = dark ? 'bg-white/10 hover:bg-white/15 border-white/15 text-indigo-200 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-500 hover:text-gray-900';
   const out   = dark ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-600';
 
   return (

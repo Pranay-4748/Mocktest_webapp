@@ -10,7 +10,7 @@ import { useToast } from '../../context/ToastContext';
 
 const EMPTY = {
   title: '', description: '', duration: '', passingMarks: '',
-  totalMarks: '', randomQuestions: false, randomOptions: false, status: 'draft',
+  totalMarks: '', totalQuestions: '', randomQuestions: false, randomOptions: false, status: 'draft',
 };
 
 const STATUS_BADGE = {
@@ -64,7 +64,7 @@ export default function ManageTests() {
   const openCreate = () => { setForm(EMPTY); setFormError(''); setEditing(null); setModal('form'); };
   const openEdit   = (t) => {
     setForm({ title: t.title, description: t.description, duration: t.duration,
-      passingMarks: t.passingMarks, totalMarks: t.totalMarks,
+      passingMarks: t.passingMarks, totalMarks: t.totalMarks, totalQuestions: t.totalQuestions ?? '',
       randomQuestions: t.randomQuestions, randomOptions: t.randomOptions, status: t.status });
     setFormError(''); setEditing(t); setModal('form');
   };
@@ -190,6 +190,7 @@ export default function ManageTests() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         {t.questionCount ?? 0}
+                        {t.totalQuestions ? <span className="text-gray-400 dark:text-gray-500">/{t.totalQuestions}</span> : ''}
                       </span>
                     </td>
                     <td className="table-cell">
@@ -251,12 +252,17 @@ export default function ManageTests() {
                   <option value="archived">Archived</option>
                 </select>
               </Field>
-              <Field label="Total Marks" required>
-                <input name="totalMarks" type="number" min="1" value={form.totalMarks} onChange={handleField} required className="input" placeholder="100" />
-              </Field>
-              <Field label="Passing Marks" required>
-                <input name="passingMarks" type="number" min="0" value={form.passingMarks} onChange={handleField} required className="input" placeholder="40" />
-              </Field>
+              <div className="col-span-2 grid grid-cols-3 gap-4">
+                <Field label="Total Marks" required>
+                  <input name="totalMarks" type="number" min="1" value={form.totalMarks} onChange={handleField} required className="input" placeholder="100" />
+                </Field>
+                <Field label="Passing Marks" required>
+                  <input name="passingMarks" type="number" min="0" value={form.passingMarks} onChange={handleField} required className="input" placeholder="40" />
+                </Field>
+                <Field label="Total Questions">
+                  <input name="totalQuestions" type="number" min="1" value={form.totalQuestions} onChange={handleField} className="input" placeholder="e.g. 50" />
+                </Field>
+              </div>
               <div className="col-span-2 flex gap-6 pt-1">
                 {[['randomQuestions', 'Randomize Questions'], ['randomOptions', 'Randomize Options']].map(([name, label]) => (
                   <label key={name} className="flex items-center gap-2.5 cursor-pointer select-none group">

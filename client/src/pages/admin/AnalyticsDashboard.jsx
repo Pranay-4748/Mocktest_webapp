@@ -111,7 +111,7 @@ export default function AnalyticsDashboard() {
         </div>
         <select
           value={testId} onChange={handleTestChange}
-          className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white min-w-[200px]"
+          className="input sm:w-56"
         >
           <option value="">All Tests</option>
           {(data?.tests ?? []).map((t) => (

@@ -7,6 +7,10 @@ const subjectSchema = new mongoose.Schema(
       required: [true, 'Subject name is required'],
       trim: true,
     },
+    topics: {
+      type: [String],
+      default: [],
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',

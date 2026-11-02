@@ -35,7 +35,7 @@ const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 const EMPTY_FORM = {
   question: '', options: ['', '', '', ''], correctAnswer: 0,
-  explanation: '', marks: 1, subject: '', difficulty: 'medium', testId: '',
+  explanation: '', marks: 1, subject: '', topic: '', difficulty: 'medium', testId: '',
 };
 
 export default function QuestionBank() {
@@ -53,13 +53,81 @@ export default function QuestionBank() {
   const [deleting, setDeleting]     = useState(false);
   const [subjects, setSubjects]     = useState([]);
   const [showUpload, setShowUpload] = useState(false);
-  const [uploadSubject, setUploadSubject] = useState('');
   const [tests, setTests] = useState([]);
   
   // Subject Management
   const [showSubjectsModal, setShowSubjectsModal] = useState(false);
   const [newSubject, setNewSubject] = useState('');
   const [subjectLoading, setSubjectLoading] = useState(false);
+  const [topics, setTopics] = useState([]);
+  const [expandedSubject, setExpandedSubject] = useState(null); // subject object
+  const [subjectTopics, setSubjectTopics] = useState([]);       // topics for expanded subject
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [renamingTopic, setRenamingTopic] = useState(null);     // topic string being renamed
+  const [renameValue, setRenameValue] = useState('');
+  const [topicActionLoading, setTopicActionLoading] = useState(false);
+  const [newTopic, setNewTopic] = useState('');
+
+  const loadSubjectTopics = async (subj) => {
+    setExpandedSubject(subj);
+    setSubjectTopics([]);
+    setRenamingTopic(null);
+    setNewTopic('');
+    setTopicsLoading(true);
+    try {
+      const { data } = await api.get(`/admin/subjects/${subj._id}/topics`);
+      setSubjectTopics(data.topics || []);
+    } catch { toast.error('Failed to load topics'); }
+    finally { setTopicsLoading(false); }
+  };
+
+  const handleDeleteTopic = async (topic) => {
+    if (!window.confirm(`Delete topic "${topic}"? This will clear it from all questions.`)) return;
+    setTopicActionLoading(true);
+    try {
+      await api.delete(`/admin/subjects/${expandedSubject._id}/topics/${encodeURIComponent(topic)}`);
+      toast.success('Topic deleted');
+      loadSubjectTopics(expandedSubject);
+    } catch { toast.error('Failed to delete topic'); }
+    finally { setTopicActionLoading(false); }
+  };
+
+  const handleAddTopic = async (e) => {
+    e.preventDefault();
+    if (!newTopic.trim() || !expandedSubject) return;
+    setTopicActionLoading(true);
+    try {
+      await api.post(`/admin/subjects/${expandedSubject._id}/topics`, { name: newTopic.trim() });
+      toast.success('Topic added');
+      setNewTopic('');
+      loadSubjectTopics(expandedSubject);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to add topic');
+    } finally { setTopicActionLoading(false); }
+  };
+
+  const handleRenameTopic = async (oldTopic) => {
+    if (!renameValue.trim()) return;
+    setTopicActionLoading(true);
+    try {
+      await api.put(`/admin/subjects/${expandedSubject._id}/topics/${encodeURIComponent(oldTopic)}`, { name: renameValue.trim() });
+      toast.success('Topic renamed');
+      setRenamingTopic(null);
+      setRenameValue('');
+      loadSubjectTopics(expandedSubject);
+    } catch { toast.error('Failed to rename topic'); }
+    finally { setTopicActionLoading(false); }
+  };
+
+  useEffect(() => {
+    setTopics([]);
+    if (!form.subject) return;
+    const subj = subjects.find(s => s.name === form.subject);
+    if (!subj) return;
+    api.get(`/admin/subjects/${subj._id}/topics`)
+      .then(({ data }) => setTopics(data.topics || []))
+      .catch(() => {});
+  }, [form.subject, subjects]);
 
   const fetchSubjects = useCallback(async () => {
     try {
@@ -106,6 +174,7 @@ export default function QuestionBank() {
       explanation:  q.explanation || '',
       marks:        q.marks,
       subject:      q.subject || '',
+      topic:        q.topic || '',
       difficulty:   q.difficulty,
       testId:       q.testId ? String(q.testId) : '',
     });
@@ -126,11 +195,10 @@ export default function QuestionBank() {
     e.preventDefault();
     setFormError(''); setSaving(true);
     try {
-      await api.put(`/admin/questions/${editTarget._id}`, {
-        ...form,
-        correctAnswer: Number(form.correctAnswer),
-        marks:         Number(form.marks),
-      });
+      const topicValue = form.topic === '__new__' ? (form._newTopic || '').trim() : form.topic;
+      const payload = { ...form, topic: topicValue, correctAnswer: Number(form.correctAnswer), marks: Number(form.marks) };
+      delete payload._newTopic;
+      await api.put(`/admin/questions/${editTarget._id}`, payload);
       toast.success('Question updated');
       setModal(null);
       fetchGroups();
@@ -174,7 +242,6 @@ export default function QuestionBank() {
       await api.delete(`/admin/subjects/${id}`);
       fetchSubjects();
       toast.success('Subject deleted');
-      if (uploadSubject === subjects.find(s => s._id === id)?.name) setUploadSubject('');
     } catch {
       toast.error('Failed to delete subject');
     }
@@ -212,19 +279,9 @@ export default function QuestionBank() {
             >
               Manage Subjects
             </button>
-            <select
-              value={uploadSubject}
-              onChange={(e) => setUploadSubject(e.target.value)}
-              className="input sm:w-48 text-sm"
-            >
-              <option value="">Select subject to upload…</option>
-              {subjects.map((s) => <option key={s._id} value={s.name}>{s.name}</option>)}
-            </select>
             <button
               onClick={() => setShowUpload(true)}
-              disabled={!uploadSubject}
-              title={!uploadSubject ? 'Select a subject first' : 'Upload DOCX questions'}
-              className="flex items-center gap-2 btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 btn-secondary text-sm"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -295,7 +352,7 @@ export default function QuestionBank() {
       ) : (
         <div className="space-y-4">
           {groups.map((group, gIdx) => {
-            const isOpen = collapsed[group.subject] !== true;
+            const isOpen = collapsed[group.subject] === true;
             const gradient = SUBJECT_GRADIENTS[gIdx % SUBJECT_GRADIENTS.length];
 
             return (
@@ -364,7 +421,7 @@ export default function QuestionBank() {
                               {q.options.map((opt, i) => (
                                 <span
                                   key={i}
-                                  className={`text-xs px-2 py-0.5 rounded-lg ${
+                                  className={`text-xs px-2 py-0.5 rounded-lg cursor-default select-none ${
                                     i === q.correctAnswer
                                       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-semibold ring-1 ring-emerald-300 dark:ring-emerald-700'
                                       : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
@@ -462,11 +519,32 @@ export default function QuestionBank() {
                 placeholder="Optional explanation..." className="input resize-none" />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Subject</label>
-                <input name="subject" value={form.subject} onChange={handleField} placeholder="e.g. Math" className="input" />
+                <select name="subject" value={form.subject} onChange={handleField} className="input">
+                  <option value="">— None —</option>
+                  {subjects.map(s => <option key={s._id} value={s.name}>{s.name}</option>)}
+                </select>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Topic</label>
+                <select name="topic" value={form.topic} onChange={handleField} disabled={!form.subject} className="input disabled:opacity-50">
+                  <option value="">— None —</option>
+                  {topics.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="__new__">+ New topic…</option>
+                </select>
+                {form.topic === '__new__' && (
+                  <input
+                    placeholder="Enter new topic"
+                    value={form._newTopic || ''}
+                    onChange={e => setForm(f => ({ ...f, _newTopic: e.target.value }))}
+                    className="mt-1.5 input"
+                  />
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Difficulty</label>
                 <select name="difficulty" value={form.difficulty} onChange={handleField} className="input">
@@ -502,9 +580,8 @@ export default function QuestionBank() {
       )}
 
       {/* ── Upload DOCX Modal ── */}
-      {showUpload && uploadSubject && (
+      {showUpload && (
         <UploadQuestionsModal
-          subjectName={uploadSubject}
           onClose={() => setShowUpload(false)}
           onImported={() => { fetchGroups(); setShowUpload(false); }}
         />
@@ -512,8 +589,9 @@ export default function QuestionBank() {
 
       {/* ── Manage Subjects Modal ── */}
       {showSubjectsModal && (
-        <Modal title="Manage Subjects" onClose={() => setShowSubjectsModal(false)}>
+        <Modal title="Manage Subjects & Topics" onClose={() => { setShowSubjectsModal(false); setExpandedSubject(null); }}>
           <div className="space-y-4">
+            {/* Add subject */}
             <form onSubmit={handleAddSubject} className="flex gap-2">
               <input
                 type="text"
@@ -523,34 +601,138 @@ export default function QuestionBank() {
                 onChange={(e) => setNewSubject(e.target.value)}
                 disabled={subjectLoading}
               />
-              <button
-                type="submit"
-                disabled={!newSubject.trim() || subjectLoading}
-                className="btn-primary"
-              >
-                {subjectLoading ? '...' : 'Add'}
+              <button type="submit" disabled={!newSubject.trim() || subjectLoading} className="btn-primary">
+                {subjectLoading ? '…' : 'Add'}
               </button>
             </form>
-            
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg max-h-60 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
-              {subjects.length === 0 ? (
-                <p className="text-sm text-center py-4 text-gray-500">No subjects yet.</p>
-              ) : (
-                subjects.map(s => (
-                  <div key={s._id} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{s.name}</span>
-                    <button
-                      onClick={() => handleDeleteSubject(s._id)}
-                      className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded transition"
-                      title="Delete Subject"
+
+            {/* Two-panel layout */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Left — subjects list */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Subjects</p>
+                <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 max-h-64 overflow-y-auto">
+                  {subjects.length === 0 ? (
+                    <p className="text-sm text-center py-6 text-gray-400">No subjects yet.</p>
+                  ) : subjects.map(s => (
+                    <div
+                      key={s._id}
+                      onClick={() => expandedSubject?._id === s._id ? setExpandedSubject(null) : loadSubjectTopics(s)}
+                      className={`flex items-center justify-between px-3 py-2.5 cursor-pointer transition ${
+                        expandedSubject?._id === s._id
+                          ? 'bg-indigo-50 dark:bg-indigo-950/40'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                      }`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <svg className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                          expandedSubject?._id === s._id ? 'rotate-90 text-indigo-500' : 'text-gray-400'
+                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className={`text-sm font-medium truncate ${
+                          expandedSubject?._id === s._id ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'
+                        }`}>{s.name}</span>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteSubject(s._id); }}
+                        className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 p-1 rounded transition shrink-0"
+                        title="Delete subject"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right — topics for selected subject */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {expandedSubject ? `Topics — ${expandedSubject.name}` : 'Topics'}
+                </p>
+
+                {/* Add topic form */}
+                {expandedSubject && (
+                  <form onSubmit={handleAddTopic} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      placeholder="New topic name"
+                      className="input flex-1 py-1.5 text-sm"
+                      value={newTopic}
+                      onChange={e => setNewTopic(e.target.value)}
+                      disabled={topicActionLoading}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTopic.trim() || topicActionLoading}
+                      className="btn-primary px-3 py-1.5 text-sm disabled:opacity-50"
+                    >
+                      Add
                     </button>
-                  </div>
-                ))
-              )}
+                  </form>
+                )}
+
+                <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 max-h-52 overflow-y-auto">
+                  {!expandedSubject ? (
+                    <p className="text-sm text-center py-6 text-gray-400">← Select a subject</p>
+                  ) : topicsLoading ? (
+                    <div className="py-6 flex justify-center"><Spinner /></div>
+                  ) : subjectTopics.length === 0 ? (
+                    <p className="text-sm text-center py-6 text-gray-400">No topics yet.</p>
+                  ) : subjectTopics.map(t => (
+                    <div key={t} className="px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                      {renamingTopic === t ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={e => setRenameValue(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleRenameTopic(t); if (e.key === 'Escape') setRenamingTopic(null); }}
+                            className="input flex-1 py-1 text-sm"
+                          />
+                          <button
+                            onClick={() => handleRenameTopic(t)}
+                            disabled={!renameValue.trim() || topicActionLoading}
+                            className="btn-primary px-2.5 py-1 text-xs disabled:opacity-50"
+                          >Save</button>
+                          <button
+                            onClick={() => setRenamingTopic(null)}
+                            className="btn-secondary px-2.5 py-1 text-xs"
+                          >✕</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{t}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => { setRenamingTopic(t); setRenameValue(t); }}
+                              className="text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 p-1 rounded transition"
+                              title="Rename topic"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTopic(t)}
+                              disabled={topicActionLoading}
+                              className="text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 p-1 rounded transition"
+                              title="Delete topic"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </Modal>
